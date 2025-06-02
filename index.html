@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Engine Car — Système Sonore Avancé</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#000000">
+    
+    <!-- Icône -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon-192.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #0c0c0c 100%);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            padding: 2rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+        }
+
+        .mode-button {
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 0.8rem 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .mode-button:hover {
+            border-color: #4ecdc4;
+        }
+
+        .mode-button.active {
+            background: linear-gradient(135deg, #4ecdc4, #45b7d1);
+            border-color: #4ecdc4;
+        }
+
+        .engine-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .engine-button {
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 1.5rem 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .engine-button:hover {
+            transform: translateY(-5px);
+            border-color: #4ecdc4;
+            box-shadow: 0 10px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .engine-button.active {
+            background: linear-gradient(135deg, #4ecdc4, #45b7d1);
+            border-color: #4ecdc4;
+            transform: scale(1.05);
+        }
+
+        .engine-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .engine-button:hover::before {
+            left: 100%;
+        }
+
+        .engine-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .engine-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+        }
+
+        .rpm-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .speed-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+            display: none;
+        }
+
+        .rpm-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #333;
+            outline: none;
+            margin-bottom: 1rem;
+            -webkit-appearance: none;
+        }
+
+        .rpm-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .rpm-slider::-moz-range-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .visualizer {
+            width: 100%;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sound-wave {
+            width: 4px;
+            background: linear-gradient(to top, #4ecdc4, #45b7d1);
+            margin: 0 2px;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .geolocation-status {
+            color: #888;
+            font-style: italic;
+            margin-top: 0.5rem;
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .audio-button {
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .audio-button:hover {
+            border-color: #4ecdc4;
+        }
+
+        @media (max-width: 480px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            .engine-selector {
+                grid-template-columns: 1fr;
+            }
+            
+            .rpm-display, .speed-display {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🏎️ Sound Engine Car</h1>
+        <p class="subtitle">Système sonore avancé pour une expérience réaliste</p>
+        
+        <div class="mode-selector">
+            <button class="mode-button active" data-mode="static">Stationnaire</button>
+            <button class="mode-button" data-mode="driving">Conduite</button>
+        </div>
+        
+        <div class="engine-selector">
+            <button class="engine-button" data-engine="v8">
+                <span class="engine-icon">🚗</span>
+                <span class="engine-name">V8 Muscle</span>
+            </button>
+            <button class="engine-button" data-engine="f1">
+                <span class="engine-icon">🏎️</span>
+                <span class="engine-name">F1 Racing</span>
+            </button>
+            <button class="engine-button" data-engine="rally">
+                <span class="engine-icon">🚙</span>
+                <span class="engine-name">Rally Turbo</span>
+            </button>
+            <button class="engine-button" data-engine="ev">
+                <span class="engine-icon">⚡</span>
+                <span class="engine-name">Electric</span>
+            </button>
+        </div>
+
+        <div class="controls">
+            <div class="rpm-display" id="rpmDisplay">0 RPM</div>
+            <div class="speed-display" id="speedDisplay">0 km/h</div>
+            <input type="range" class="rpm-slider" id="rpmSlider" min="0" max="8000" value="0" step="100">
+            <div class="visualizer" id="visualizer"></div>
+            
+            <div class="audio-controls">
+                <button class="audio-button" id="audioToggle">🔈 Désactivé</button>
+                <button class="audio-button" id="engineToggle">⏸️ Arrêter</button>
+            </div>
+            
+            <div class="status" id="status">
+                Sélectionnez un moteur pour commencer
+            </div>
+            <div class="geolocation-status" id="geoStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        class SoundEngineCar {
+            constructor() {
+                this.currentEngine = null;
+                this.audioContext = null;
+                this.oscillator = null;
+                this.gainNode = null;
+                this.filterNode = null;
+                this.isPlaying = false;
+                this.rpm = 0;
+                this.animationFrame = null;
+                this.mode = 'static'; // 'static' ou 'driving'
+                this.watchId = null;
+                this.speedKmh = 0;
+                this.audioEnabled = false;
+                
+                this.engineProfiles = {
+                    v8: {
+                        name: 'V8 Muscle Car',
+                        baseFreq: 80,
+                        freqFactor: 0.01,
+                        waveType: 'sawtooth',
+                        harmonics: [
+                            { freqMultiplier: 2, gain: 0.4 },
+                            { freqMultiplier: 3, gain: 0.3 },
+                            { freqMultiplier: 4, gain: 0.2 }
+                        ],
+                        rumble: { freq: 40, gain: 0.1 },
+                        color: '#ff6b6b'
+                    },
+                    f1: {
+                        name: 'Formule 1',
+                        baseFreq: 200,
+                        freqFactor: 0.02,
+                        waveType: 'square',
+                        harmonics: [
+                            { freqMultiplier: 1.5, gain: 0.5 },
+                            { freqMultiplier: 2.5, gain: 0.4 },
+                            { freqMultiplier: 3.5, gain: 0.3 }
+                        ],
+                        rumble: { freq: 60, gain: 0.05 },
+                        color: '#45b7d1'
+                    },
+                    rally: {
+                        name: 'Rally Turbo',
+                        baseFreq: 120,
+                        freqFactor: 0.015,
+                        waveType: 'sawtooth',
+                        harmonics: [
+                            { freqMultiplier: 1.8, gain: 0.5 },
+                            { freqMultiplier: 2.8, gain: 0.3 },
+                            { freqMultiplier: 3.8, gain: 0.2 }
+                        ],
+                        rumble: { freq: 50, gain: 0.15 },
+                        color: '#ffd93d'
+                    },
+                    ev: {
+                        name: 'Électrique',
+                        baseFreq: 300,
+                        freqFactor: 0.025,
+                        waveType: 'sine',
+                        harmonics: [
+                            { freqMultiplier: 1.2, gain: 0.3 },
+                            { freqMultiplier: 1.8, gain: 0.2 },
+                            { freqMultiplier: 2.4, gain: 0.15 }
+                        ],
+                        rumble: { freq: 100, gain: 0.02 },
+                        color: '#4ecdc4'
+                    }
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.createVisualizer();
+                this.bindEvents();
+                this.registerServiceWorker();
+                this.updateModeUI();
+                
+                // Initialiser le contexte audio (mais ne pas démarrer)
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.createAudioNodes();
+                } catch (e) {
+                    console.error("Erreur d'initialisation audio:", e);
+                    document.getElementById('status').textContent = 
+                        "Erreur audio: Votre navigateur ne supporte pas la Web Audio API";
+                }
+            }
+            
+            createAudioNodes() {
+                if (!this.audioContext) return;
+                
+                // Créer les nœuds audio de base
+                this.gainNode = this.audioContext.createGain();
+                this.filterNode = this.audioContext.createBiquadFilter();
+                
+                // Configurer le filtre
+                this.filterNode.type = 'lowpass';
+                this.filterNode.frequency.value = 1000;
+                this.filterNode.Q.value = 1.0;
+                
+                // Connecter les nœuds
+                this.filterNode.connect(this.gainNode);
+                this.gainNode.connect(this.audioContext.destination);
+                
+                // Désactiver le son par défaut
+                this.gainNode.gain.value = 0;
+            }
+            
+            createVisualizer() {
+                const visualizer = document.getElementById('visualizer');
+                for (let i = 0; i < 20; i++) {
+                    const wave = document.createElement('div');
+                    wave.className = 'sound-wave';
+                    wave.style.height = '5px';
+                    visualizer.appendChild(wave);
+                }
+            }
+            
+            bindEvents() {
+                // Sélection du mode
+                document.querySelectorAll('.mode-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const mode = e.currentTarget.dataset.mode;
+                        this.setMode(mode);
+                    });
+                });
+                
+                // Sélection du moteur
+                document.querySelectorAll('.engine-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const engine = e.currentTarget.dataset.engine;
+                        this.selectEngine(engine);
+                    });
+                });
+                
+                // Contrôle RPM
+                const rpmSlider = document.getElementById('rpmSlider');
+                rpmSlider.addEventListener('input', (e) => {
+                    this.setRPM(parseInt(e.target.value));
+                });
+                
+                // Toggle audio
+                document.getElementById('audioToggle').addEventListener('click', () => {
+                    this.toggleAudio();
+                });
+                
+                // Toggle moteur
+                document.getElementById('engineToggle').addEventListener('click', () => {
+                    this.toggleEngine();
+                });
+            }
+            
+            toggleAudio() {
+                this.audioEnabled = !this.audioEnabled;
+                const button = document.getElementById('audioToggle');
+                
+                if (this.audioEnabled) {
+                    button.textContent = '🔊 Activé';
+                    button.style.borderColor = '#4ecdc4';
+                    
+                    // Réactiver le son
+                    if (this.isPlaying) {
+                        this.playEngineSound();
+                    }
+                } else {
+                    button.textContent = '🔈 Désactivé';
+                    button.style.borderColor = '#333';
+                    
+                    // Couper le son
+                    if (this.gainNode) {
+                        this.gainNode.gain.value = 0;
+                    }
+                }
+            }
+            
+            toggleEngine() {
+                const button = document.getElementById('engineToggle');
+                
+                if (this.isPlaying) {
+                    this.setRPM(0);
+                    button.textContent = '▶️ Démarrer';
+                    button.style.borderColor = '#4ecdc4';
+                } else {
+                    this.setRPM(1000);
+                    button.textContent = '⏸️ Arrêter';
+                    button.style.borderColor = '#ff6b6b';
+                }
+            }
+            
+            setMode(mode) {
+                if (this.mode === mode) return;
+                
+                this.mode = mode;
+                this.updateModeUI();
+                
+                // Mettre à jour les boutons actifs
+                document.querySelectorAll('.mode-button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.mode === mode);
+                });
+                
+                // Gérer la géolocalisation
+                if (mode === 'driving') {
+                    this.startGeolocation();
+                } else {
+                    this.stopGeolocation();
+                }
+                
+                // Réinitialiser l'affichage
+                if (mode === 'static') {
+                    this.setRPM(0);
+                }
+                
+                document.getElementById('status').textContent = 
+                    `Mode ${mode === 'static' ? 'Stationnaire' : 'Conduite'} activé`;
+            }
+            
+            updateModeUI() {
+                const rpmDisplay = document.getElementById('rpmDisplay');
+                const rpmSlider = document.getElementById('rpmSlider');
+                const speedDisplay = document.getElementById('speedDisplay');
+                const geoStatus = document.getElementById('geoStatus');
+                
+                if (this.mode === 'static') {
+                    rpmDisplay.style.display = 'block';
+                    rpmSlider.style.display = 'block';
+                    speedDisplay.style.display = 'none';
+                    geoStatus.textContent = '';
+                } else {
+                    rpmDisplay.style.display = 'none';
+                    rpmSlider.style.display = 'none';
+                    speedDisplay.style.display = 'block';
+                    speedDisplay.textContent = '0 km/h';
+                }
+            }
+            
+            startGeolocation() {
+                if (!navigator.geolocation) {
+                    document.getElementById('geoStatus').textContent = 
+                        'Géolocalisation non supportée par votre navigateur';
+                    return;
+                }
+                
+                document.getElementById('geoStatus').textContent = 
+                    'Recherche de votre position...';
+                
+                this.watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        // Vérifier si la vitesse est disponible
+                        if (position.coords.speed !== null) {
+                            this.speedKmh = position.coords.speed * 3.6; // Conversion m/s -> km/h
+                            document.getElementById('speedDisplay').textContent = 
+                                `${this.speedKmh.toFixed(1)} km/h`;
+                            
+                            // Mettre à jour le RPM en fonction de la vitesse
+                            this.updateRPMFromSpeed();
+                        } else {
+                            document.getElementById('geoStatus').textContent = 
+                                'Vitesse non disponible - assurez-vous de vous déplacer';
+                        }
+                    },
+                    (error) => {
+                        let errorMessage = '';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = 'Accès à la géolocalisation refusé';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = 'Position indisponible';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = 'Délai de localisation dépassé';
+                                break;
+                            default:
+                                errorMessage = 'Erreur inconnue';
+                        }
+                        document.getElementById('geoStatus').textContent = 
+                            `Erreur: ${errorMessage}`;
+                    },
+                    { 
+                        enableHighAccuracy: true, 
+                        maximumAge: 0, 
+                        timeout: 5000 
+                    }
+                );
+            }
+            
+            stopGeolocation() {
+                if (this.watchId) {
+                    navigator.geolocation.clearWatch(this.watchId);
+                    this.watchId = null;
+                    this.speedKmh = 0;
+                    document.getElementById('geoStatus').textContent = '';
+                }
+            }
+            
+            updateRPMFromSpeed() {
+                // Calcul du RPM basé sur la vitesse et le type de moteur
+                let rpm = 0;
+                
+                switch(this.currentEngine) {
+                    case 'v8':
+                        rpm = Math.min(8000, 1000 + this.speedKmh * 40);
+                        break;
+                    case 'f1':
+                        rpm = Math.min(8000, 3000 + this.speedKmh * 30);
+                        break;
+                    case 'rally':
+                        rpm = Math.min(8000, 1500 + this.speedKmh * 35);
+                        break;
+                    case 'ev':
+                        rpm = Math.min(8000, 1000 + this.speedKmh * 25);
+                        break;
+                    default:
+                        rpm = Math.min(8000, 1000 + this.speedKmh * 30);
+                }
+                
+                this.setRPM(Math.round(rpm));
+            }
+            
+            selectEngine(engineType) {
+                // Arrêter le son actuel
+                this.stopEngineSound();
+                
+                // Mettre à jour l'interface
+                document.querySelectorAll('.engine-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-engine="${engineType}"]`).classList.add('active');
+                
+                // Mettre à jour le moteur courant
+                this.currentEngine = engineType;
+                
+                // Démarrer le nouveau moteur
+                if (this.isPlaying) {
+                    this.playEngineSound();
+                }
+                
+                document.getElementById('status').textContent = 
+                    `Moteur ${this.engineProfiles[engineType].name} sélectionné`;
+                
+                // Si en mode conduite, mettre à jour le RPM
+                if (this.mode === 'driving') {
+                    this.updateRPMFromSpeed();
+                }
+            }
+            
+            playEngineSound() {
+                if (!this.currentEngine || !this.audioContext || !this.audioEnabled) return;
+                
+                // Arrêter le son précédent
+                this.stopEngineSound();
+                
+                // Récupérer le profil du moteur
+                const profile = this.engineProfiles[this.currentEngine];
+                
+                // Créer l'oscillateur principal
+                this.oscillator = this.audioContext.createOscillator();
+                this.oscillator.type = profile.waveType;
+                
+                // Configurer l'oscillateur principal
+                const baseFreq = profile.baseFreq + (this.rpm * profile.freqFactor);
+                this.oscillator.frequency.setValueAtTime(baseFreq, this.audioContext.currentTime);
+                
+                // Créer les harmoniques
+                this.harmonics = [];
+                profile.harmonics.forEach(harm => {
+                    const harmonicOsc = this.audioContext.createOscillator();
+                    harmonicOsc.type = profile.waveType;
+                    harmonicOsc.frequency.setValueAtTime(baseFreq * harm.freqMultiplier, this.audioContext.currentTime);
+                    
+                    const harmonicGain = this.audioContext.createGain();
+                    harmonicGain.gain.value = harm.gain;
+                    
+                    harmonicOsc.connect(harmonicGain);
+                    harmonicGain.connect(this.filterNode);
+                    
+                    harmonicOsc.start();
+                    this.harmonics.push({osc: harmonicOsc, gain: harmonicGain});
+                });
+                
+                // Ajouter un effet de grondement (rumble)
+                this.rumbleOsc = this.audioContext.createOscillator();
+                this.rumbleOsc.type = 'sine';
+                this.rumbleOsc.frequency.setValueAtTime(profile.rumble.freq, this.audioContext.currentTime);
+                
+                this.rumbleGain = this.audioContext.createGain();
+                this.rumbleGain.gain.value = profile.rumble.gain;
+                
+                this.rumbleOsc.connect(this.rumbleGain);
+                this.rumbleGain.connect(this.filterNode);
+                this.rumbleOsc.start();
+                
+                // Connecter l'oscillateur principal
+                this.oscillator.connect(this.filterNode);
+                this.oscillator.start();
+                
+                // Appliquer les RPM actuels
+                this.setRPM(this.rpm);
+                
+                this.isPlaying = true;
+                this.startVisualization();
+            }
+            
+            stopEngineSound() {
+                if (this.oscillator) {
+                    this.oscillator.stop();
+                    this.oscillator = null;
+                }
+                
+                if (this.harmonics) {
+                    this.harmonics.forEach(h => {
+                        h.osc.stop();
+                        h.gain.disconnect();
+                    });
+                    this.harmonics = [];
+                }
+                
+                if (this.rumbleOsc) {
+                    this.rumbleOsc.stop();
+                    this.rumbleOsc = null;
+                }
+                
+                if (this.rumbleGain) {
+                    this.rumbleGain.disconnect();
+                    this.rumbleGain = null;
+                }
+                
+                this.isPlaying = false;
+                this.stopVisualization();
+            }
+            
+            setRPM(rpm) {
+                this.rpm = rpm;
+                
+                // Mettre à jour l'affichage
+                document.getElementById('rpmDisplay').textContent = `${rpm} RPM`;
+                document.getElementById('rpmSlider').value = rpm;
+                
+                if (!this.currentEngine) return;
+                
+                // Mettre à jour le son
+                if (this.isPlaying && this.audioEnabled) {
+                    this.updateEngineSound();
+                }
+                
+                // Mettre à jour la visualisation
+                this.updateVisualizer();
+                
+                // Démarrer/arrêter la visualisation
+                if (rpm > 0 && !this.isPlaying && this.audioEnabled) {
+                    this.playEngineSound();
+                } else if (rpm === 0 && this.isPlaying) {
+                    this.stopEngineSound();
+                }
+            }
+            
+            updateEngineSound() {
+                if (!this.currentEngine || !this.oscillator || !this.audioContext) return;
+                
+                const profile = this.engineProfiles[this.currentEngine];
+                const now = this.audioContext.currentTime;
+                
+                // Mettre à jour la fréquence principale
+                const baseFreq = profile.baseFreq + (this.rpm * profile.freqFactor);
+                this.oscillator.frequency.setValueAtTime(baseFreq, now);
+                
+                // Mettre à jour les harmoniques
+                if (this.harmonics) {
+                    profile.harmonics.forEach((harm, i) => {
+                        if (this.harmonics[i]) {
+                            this.harmonics[i].osc.frequency.setValueAtTime(
+                                baseFreq * harm.freqMultiplier, 
+                                now
+                            );
+                        }
+                    });
+                }
+                
+                // Mettre à jour le volume
+                const volume = Math.min(0.5, this.rpm / 8000 * 0.5);
+                this.gainNode.gain.setValueAtTime(volume, now);
+                
+                // Mettre à jour le filtre
+                const filterFreq = 200 + (this.rpm / 8000 * 5000);
+                this.filterNode.frequency.setValueAtTime(filterFreq, now);
+                
+                // Mettre à jour le grondement (rumble)
+                if (this.rumbleOsc) {
+                    const rumbleFreq = profile.rumble.freq + (this.rpm / 1000);
+                    this.rumbleOsc.frequency.setValueAtTime(rumbleFreq, now);
+                    
+                    const rumbleGain = profile.rumble.gain * Math.min(1, this.rpm / 2000);
+                    this.rumbleGain.gain.setValueAtTime(rumbleGain, now);
+                }
+            }
+            
+            updateVisualizer() {
+                const waves = document.querySelectorAll('.sound-wave');
+                const intensity = this.rpm / 1000;
+                
+                waves.forEach((wave, index) => {
+                    // Créer un effet de vague avec un décalage
+                    const waveOffset = Math.sin(index * 0.3 + Date.now() * 0.005);
+                    const height = 5 + Math.abs(waveOffset) * intensity * 40;
+                    wave.style.height = `${Math.min(height, 80)}px`;
+                    
+                    // Couleurs basées sur les RPM
+                    if (this.currentEngine && this.engineProfiles[this.currentEngine]) {
+                        wave.style.background = `linear-gradient(to top, ${this.engineProfiles[this.currentEngine].color}, #ffffff)`;
+                    } else if (this.rpm < 2000) {
+                        wave.style.background = 'linear-gradient(to top, #4ecdc4, #ffffff)';
+                    } else if (this.rpm < 5000) {
+                        wave.style.background = 'linear-gradient(to top, #ffd93d, #ffffff)';
+                    } else {
+                        wave.style.background = 'linear-gradient(to top, #ff6b6b, #ffffff)';
+                    }
+                });
+            }
+            
+            startVisualization() {
+                const animate = () => {
+                    if (this.isPlaying) {
+                        this.updateVisualizer();
+                        this.animationFrame = requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+            
+            stopVisualization() {
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                }
+                
+                // Réinitialiser les vagues
+                document.querySelectorAll('.sound-wave').forEach(wave => {
+                    wave.style.height = '5px';
+                });
+            }
+            
+            registerServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', () => {
+                        navigator.serviceWorker.register('./sw.js')
+                            .then(() => console.log('✔ Service Worker enregistré'))
+                            .catch(err => console.error('SW registration failed:', err));
+                    });
+                }
+            }
+        }
+        
+        // Activation tactile pour mobile
+        document.addEventListener('click', () => {
+            // Nécessaire pour permettre la lecture audio sur mobile
+            if (window.soundApp && !window.soundApp.audioContext) {
+                try {
+                    window.soundApp.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    window.soundApp.createAudioNodes();
+                } catch (e) {
+                    console.error("Erreur d'initialisation audio:", e);
+                }
+            }
+        });
+        
+        // Initialiser l'application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.soundApp = new SoundEngineCar();
+        });
+    </script>
+</body>
+</html>

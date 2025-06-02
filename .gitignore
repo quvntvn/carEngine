@@ -1,0 +1,13 @@
+# Node / npm
+node_modules/
+npm-debug.log*
+*.log
+
+# Build / dist
+dist/
+*.min.css
+*.min.js
+
+# OS
+.DS_Store
+Thumbs.db
